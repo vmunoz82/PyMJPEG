@@ -1,0 +1,74 @@
+This example shows a rather complex program in Python, it is a JPEG decoder 
+that is able to decode (M)JPEG Baseline complain files.
+
+The image to be decoded could be in any chroma sub-sampling configuration, for 
+example 4:4:4, 4:2:2, 4:2:0, or any custom one such that each plane is block 
+quantity is a power of 2.
+
+Apart from plain JPEG files, this program can demux a .MOV (or .MP4) video 
+file, and if it found a JPEG streaming on it, it dumps and decode every frame.
+
+The program has to be invoked as follows:
+
+python decode.py <image.jpg|video.mov>
+
+The procedure to this type of image processing usually require a lot of 
+processing, for decoding a JPEG file consist of the following steps:
+
+-setup Huffman tables.
+-setup the quantization matrix.
+-decode a 8x8 block using Huffman codes and RLE.
+-apply a 2D Inverse Discrete Cosine Transformation.
+-process the chroma sub-sampling.
+-convert from the YCbCr color space to the RGB color space.
+
+Huffman decoding, and IDCT transformation make the JPEG decoding very Python 
+unfriendly due to the speed of the Python bytecode execution, moreover, the 
+YCbCr to RGB and the blit of the final image is very time consuming when 
+applied to each pixel of an image.
+
+Inside this example I provide several examples to demonstrate Python 
+performance optimization techniques.
+All these techniques are fine tuned with a very carefully profiling of code 
+execution, and were tested decoding a video of 1180 frames of 320x240 pixels 
+each (ftp://ftp.hp.com/pub/information_storage/software/video/MakeUp.mov) on a 
+Core i5 CPU.
+
+The resumed results are shown in the following tables:
+
+CPython 2.7
+2155.45 seconds.
+(1.0 speed factor)
+
+PyPy 1.7 (JIT)
+198.85 seconds.
+(10.8 speed factor)
+
+CPython 2.7 modules C Huffman and IDCT modules.
+393.75 seconds.
+(5.5 speed factor)
+
+Refactoring of Jpeg_decoder class for Cython and Huffman and IDCT C code
+4.29 seconds.
+(502.4 speed factor)
+
+These experiment results shows that Python code could perform at outstanding 
+speeds when it is properly profiled, and the CPU intensive critical parts are 
+refactored to a lower level and higher performance implementations.
+
+In this case we decode a video containing 40 seconds of image in ~4.3 seconds, 
+enough for realtime player, and ~500 times the speed of the pure Python 
+implementation.
+
+Directory description:
+pure: pure Python version.
+common: C version of IDCT, YCbCr -> RGB, and Huffman algorithms.
+mod: CPython Huffman, IDCT and YCbCr C modules.
+mod/linx64_p27: Python 2.7 (Linux x86_64) binary modules
+mod/win32_p27: Python 2.7 (Windows 32 bits) binary modules
+fast: Jpeg_decoder class (jpegdec.py replacement) refoctored for Cython and 
+      integrated with native C version of Huffman, IDCT and YCbCr->RGB code.
+fast/linx64_p27: Python 2.7 (Linux x64) binary modules
+fast/win32_p27: Python 2.7 (Windows 32 bits) binary modules
+fast/win32_p32: Python 3.2 (Windows 32 bits) binary modules
+
